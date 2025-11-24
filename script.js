@@ -56,16 +56,26 @@ const containerApp = document.querySelector('.app');
 const containerMovements = document.querySelector('.movements');
 
 const btnLogin = document.querySelector('.login__btn');
+const formTransfer = document.querySelector(".form--transfer")
+const btnTransfer = document.querySelector(".form__btn--transfer")
 
 const inputLoginUsername = document.querySelector('.login__input--user');
 const inputLoginPin = document.querySelector('.login__input--pin');
-const usuarioActual = account1;
+let usuarioActual = account1;
+const btnSort = document.querySelector(".btn--sort")
+const userTransfer = document.querySelector(".form__input--to");
+const amountToTransfer = document.querySelector(".form__input--amount");
+const amountToLoan = document.querySelector(".form__input--loan-amount");
+// const confirmUser = document.querySelector(".")
+// const confirmPin = document.querySelector(".")
 
 /////////////////////////////////////////////////
 // Funciones auxiliares
 
-containerApp.style.opacity = 100;
-labelWelcome.textContent = 'Welcome back';
+// containerApp.style.opacity = 100;
+// labelWelcome.textContent = 'Welcome back';
+
+
 
 function crearMovimiento(value, indice) {
   const tipo = value >= 0 ? 'deposit' : 'withdrawal';
@@ -90,7 +100,7 @@ function crearMovimiento(value, indice) {
 
 
 function mostrarMoviientos(movements){
-
+  containerMovements.innerHTML = ""
   movements.forEach((movimiento, indice) => {
     crearMovimiento(movimiento, indice);
   });
@@ -105,7 +115,7 @@ function ordenar(movements){
   while(newMovements.length > 0){
     mayor = newMovements[0];
     for(const movimiento of newMovements){
-      if(movimiento > mayor){
+      if(movimiento < mayor){
         mayor = movimiento;
       }
     }
@@ -113,10 +123,50 @@ function ordenar(movements){
       ordenados.push(newMovements.splice(newMovements.indexOf(mayor), 1)[0]);
     }
   }
+
   return ordenados;
 }
 
-console.log(ordenar(movements));
+const modificar = {
+  saldo : () => {labelBalance.textContent = saldoActual() + "€"},
+  in : () => {labelSumIn.textContent = usuarioActual.movements.reduce((acc, valor) => valor > 0 ? acc + valor : acc) + "€"},
+  out : () => {labelSumOut.textContent = usuarioActual.movements.reduce((acc, valor) => valor < 0 ? acc + valor : acc)* -1 + "€"},
+  interest : () => {labelSumInterest.textContent = saldoActual() * usuarioActual.interestRate + "€"}
+}
+
+function saldoActual(){
+  return usuarioActual.movements.reduce((acc, valor) => acc + valor, 0)
+}
+
+function balance(usuario){
+  modificar.saldo()
+  modificar.in()
+  modificar.out()
+  modificar.interest()
+}
+
+
+function transferir(){
+  const toTransfer = userTransfer.value;
+  const value = Number(amountToTransfer.value);
+  const user = accounts.find(acount => acount.userName === toTransfer);
+
+  if(!user){
+    alert("No encontramos el usuario");
+  } else if(value <= 0 || !value){
+    alert("No puede enviar esa cantidad");
+  } else if(saldoActual() < value){
+    alert("Saldo insuficiente")
+  } else {
+    usuarioActual.movements.push(-value);
+    user.movements.push(value);
+    mostrarMoviientos(usuarioActual.movements)
+    modificar.saldo();
+    modificar.out();
+    modificar.interest();
+  }
+
+}
 
 function userName (cuentas){
 
@@ -145,9 +195,39 @@ function logear(userName, pin){
   if(userFound.pin === pin){
     containerApp.style.opacity = 100;
     usuarioActual = userFound;
+    labelWelcome.textContent = `Welcome back ${usuarioActual.owner.split(" ")[0]}`;
+    balance(usuarioActual)
     return
   }
   alert("Pin incorrecto");
 }
 
-logear(usuarioActual, usuarioActual.pin);
+logear(usuarioActual.userName, usuarioActual.pin);
+
+
+let ordenadoSiONo = false;
+btnSort.addEventListener("click", () =>{
+
+  if(!ordenadoSiONo){
+  mostrarMoviientos(ordenar(usuarioActual.movements))
+  ordenadoSiONo = true;
+  } else {
+    mostrarMoviientos(usuarioActual.movements);
+    ordenadoSiONo = false;
+  }
+
+})
+
+mostrarMoviientos(usuarioActual.movements)
+
+
+formTransfer.addEventListener("submit", e => {
+  e.preventDefault();
+})
+
+
+btnTransfer.addEventListener("click", transferir)
+
+btnLogin.addEventListener("click", () => {
+  logear(inputLoginUsername.value, Number(inputLoginPin.value));
+})
